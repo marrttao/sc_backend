@@ -517,8 +517,12 @@ public class SupabaseService
             : 0;
     }
 
-    public Task<HttpResponseMessage> SignUpAsync(string email, string password)
-        => SendAuthRequestAsync(HttpMethod.Post, "/auth/v1/signup", new { email, password });
+    public Task<HttpResponseMessage> SignUpAsync(string email, string password, string? redirectTo = null)
+    {
+        var frontend = redirectTo ?? Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "https://marrttao-sssoundcloud.vercel.app";
+        var path = $"/auth/v1/signup?redirect_to={Uri.EscapeDataString(frontend)}";
+        return SendAuthRequestAsync(HttpMethod.Post, path, new { email, password });
+    }
 
     public Task<HttpResponseMessage> SignInAsync(string email, string password)
         => SendAuthRequestAsync(HttpMethod.Post, "/auth/v1/token?grant_type=password", new { email, password });

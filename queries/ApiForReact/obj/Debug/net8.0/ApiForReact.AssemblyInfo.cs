@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ApiForReact")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+86c819e9dd46b3230a8f9ac050da64c8d3ce8667")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+713d7678ac220e8d98c9f79945b98819940dce0e")]
 [assembly: System.Reflection.AssemblyProductAttribute("ApiForReact")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ApiForReact")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
