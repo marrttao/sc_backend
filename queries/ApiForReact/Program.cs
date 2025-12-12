@@ -36,12 +36,40 @@ namespace queries.ApiForReact
             builder.Services.AddScoped<FeedService>();
 
             // CORS so React can call this API
-            builder.Services.AddCors(options => options.AddPolicy("Any", p =>
-                p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+            builder.Services.AddCors(options => options.AddPolicy("AllowFrontend", p =>
+                p.WithOrigins(
+                    "https://marrttao-sssoundcloud-nptkhd8tv-marrttaos-projects.vercel.app",
+                    "http://localhost:3000"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()));
 
             var app = builder.Build();
 
-            app.UseCors("Any");
+            // Global exception handler that ensures CORS headers are present on error responses
+            app.UseExceptionHandler(errorApp =>
+            {
+                errorApp.Run(async context =>
+                {
+                    var origin = context.Request.Headers["Origin"].FirstOrDefault();
+                    if (!string.IsNullOrEmpty(origin))
+                    {
+                        context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+                        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+                        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type";
+                        context.Response.Headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
+                    }
+
+                    context.Response.StatusCode = 500;
+                    context.Response.ContentType = "application/json";
+                    var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+                    var err = feature?.Error?.Message ?? "An internal server error occurred.";
+                    await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new { error = err }));
+                });
+            });
+
+            app.UseCors("AllowFrontend");
 
             app.MapPost("/call", async (CallRequest request, IServiceProvider sp) =>
             {
@@ -67,6 +95,14 @@ namespace queries.ApiForReact
                 }
 
                 return Results.Ok(result);
+            });
+
+            // Simple health endpoint to verify deployment and presence of SUPABASE env vars
+            app.MapGet("/health", () =>
+            {
+                var url = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? Environment.GetEnvironmentVariable("SupabaseUrl");
+                var key = Environment.GetEnvironmentVariable("SUPABASE_KEY") ?? Environment.GetEnvironmentVariable("SupabaseKey");
+                return Results.Ok(new { ok = true, envSupabaseUrl = !string.IsNullOrEmpty(url), envSupabaseKey = !string.IsNullOrEmpty(key) });
             });
 
             app.MapPost("/auth/signup", async (AuthRequest request, SupabaseService supabase, HttpContext httpContext) =>
