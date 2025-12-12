@@ -240,12 +240,14 @@ public class SupabaseService
 
     public async Task<ProfileDto?> GetProfileByUsernameAsync(string username, string accessToken)
     {
-        var path = $"/rest/v1/profiles?select=id,username,full_name,avatar_url,bio,banner_url&username=ilike.{username}";
+        var encoded = Uri.EscapeDataString(username ?? string.Empty);
+        var path = $"/rest/v1/profiles?select=id,username,full_name,avatar_url,bio,banner_url&username=ilike.{encoded}";
         var response = await SendAuthRequestAsync(HttpMethod.Get, path, null, accessToken);
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
+
         var data = await ReadJsonAsync<List<ProfileDto>>(response) ?? new List<ProfileDto>();
         return data.FirstOrDefault();
     }
@@ -627,7 +629,8 @@ public class SupabaseService
 
     public async Task<List<ProfileDto>> SearchProfilesAsync(string query, string accessToken)
     {
-        var path = $"/rest/v1/profiles?select=id,username,full_name,avatar_url&or=(username.ilike.*{query}*,full_name.ilike.*{query}*)&limit=10";
+        var encoded = Uri.EscapeDataString(query ?? string.Empty);
+        var path = $"/rest/v1/profiles?select=id,username,full_name,avatar_url&or=(username.ilike.*{encoded}*,full_name.ilike.*{encoded}*)&limit=10";
         var response = await SendAuthRequestAsync(HttpMethod.Get, path, null, accessToken);
         if (!response.IsSuccessStatusCode)
         {
@@ -639,7 +642,8 @@ public class SupabaseService
 
     public async Task<List<TrackSearchResult>> SearchTracksAsync(string query, string accessToken)
     {
-        var path = $"/rest/v1/tracks?select=id,title,user_id&title=ilike.*{query}*&limit=10";
+        var encoded = Uri.EscapeDataString(query ?? string.Empty);
+        var path = $"/rest/v1/tracks?select=id,title,user_id&title=ilike.*{encoded}*&limit=10";
         var response = await SendAuthRequestAsync(HttpMethod.Get, path, null, accessToken);
         if (!response.IsSuccessStatusCode)
         {
