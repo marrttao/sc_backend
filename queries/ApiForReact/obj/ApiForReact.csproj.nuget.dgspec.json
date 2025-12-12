@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\ApiForReact.csproj": {}
+    "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\ApiForReact.csproj": {}
   },
   "projects": {
-    "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\ApiForReact.csproj": {
+    "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\ApiForReact.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
+        "projectUniqueName": "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
         "projectName": "ApiForReact",
-        "projectPath": "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
+        "projectPath": "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
         "packagesPath": "C:\\Users\\marrt\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\obj\\",
+        "outputPath": "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

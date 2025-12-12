@@ -23,7 +23,7 @@ public class SupabaseService
     private readonly string _url;
     private readonly string _key;
     private readonly SupabaseOptions _options;
-    public SupabaseClient _supabase { get; }
+    public SupabaseClient? _supabase { get; private set; }
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -38,22 +38,42 @@ public class SupabaseService
         var tokenReader = new TokenReader.TokenReader();
         _url = tokenReader.GetSupabaseUrl();
         _key = tokenReader.GetSupabaseKey();
-        // Validate configuration early and provide a helpful error if missing
-        if (string.IsNullOrWhiteSpace(_url))
-        {
-            throw new InvalidOperationException("Supabase URL is not configured. Set the SUPABASE_URL or SupabaseUrl environment variable, or place it in services/tokens.json (BotSettings.SupabaseUrl).");
-        }
-        if (string.IsNullOrWhiteSpace(_key))
-        {
-            throw new InvalidOperationException("Supabase key is not configured. Set the SUPABASE_KEY or SupabaseKey environment variable, or place it in services/tokens.json (BotSettings.SupabaseKey).");
-        }
         _options = new SupabaseOptions
         {
             AutoConnectRealtime = true
         };
-        _supabase = new SupabaseClient(_url, _key, _options);
-        _httpClient = new HttpClient { BaseAddress = new Uri(_url) };
-        _httpClient.DefaultRequestHeaders.Add("apikey", _key);
+
+        // Do not throw during construction — defer validation until an operation requires Supabase.
+        if (!string.IsNullOrWhiteSpace(_url) && !string.IsNullOrWhiteSpace(_key))
+        {
+            try
+            {
+                _supabase = new SupabaseClient(_url, _key, _options);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARN] Failed to create Supabase client during startup: {ex.Message}");
+                _supabase = null;
+            }
+        }
+
+        _httpClient = new HttpClient();
+        if (!string.IsNullOrWhiteSpace(_url))
+        {
+            try
+            {
+                _httpClient.BaseAddress = new Uri(_url);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARN] Invalid SUPABASE_URL value: {ex.Message}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_key))
+        {
+            _httpClient.DefaultRequestHeaders.Add("apikey", _key);
+        }
         _jsonOptions.Converters.Add(new FlexibleStringConverter());
     }
 
@@ -75,6 +95,16 @@ public class SupabaseService
             if (_initialized)
             {
                 return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_url) || string.IsNullOrWhiteSpace(_key))
+            {
+                throw new InvalidOperationException("Supabase URL or Key is not configured. Set the SUPABASE_URL/SUPABASE_KEY environment variables or provide them in services/tokens.json.");
+            }
+
+            if (_supabase == null)
+            {
+                _supabase = new SupabaseClient(_url, _key, _options);
             }
 
             await _supabase.InitializeAsync();
@@ -104,7 +134,15 @@ public class SupabaseService
     }
 
     private Task<HttpResponseMessage> SendAuthRequestAsync(HttpMethod method, string path, object? body = null, string? bearer = null)
-        => _httpClient.SendAsync(CreateAuthRequest(method, path, body, bearer));
+    {
+        // If BaseAddress is not configured and path is relative, fail with a clear message
+        if ((_httpClient.BaseAddress == null || string.IsNullOrWhiteSpace(_url)) && !Uri.IsWellFormedUriString(path, UriKind.Absolute))
+        {
+            throw new InvalidOperationException("Supabase URL is not configured. Set the SUPABASE_URL environment variable or provide it in services/tokens.json (BotSettings.SupabaseUrl).");
+        }
+
+        return _httpClient.SendAsync(CreateAuthRequest(method, path, body, bearer));
+    }
 
     private Task<HttpResponseMessage> SendAuthRequestAsyncRequired(HttpMethod method, string path, object? body, string accessToken)
     {

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "8h8Gxbd5ywE=",
+  "dgSpecHash": "ycU0hr5BbVA=",
   "success": true,
-  "projectFilePath": "C:\\Users\\marrt\\Documents\\code\\react\\soundcloud\\soundcloud\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
+  "projectFilePath": "C:\\Users\\marrt\\Documents\\c\\backend\\queries\\ApiForReact\\ApiForReact.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\marrt\\.nuget\\packages\\microsoft.aspnetcore.openapi\\8.0.0\\microsoft.aspnetcore.openapi.8.0.0.nupkg.sha512",
     "C:\\Users\\marrt\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",

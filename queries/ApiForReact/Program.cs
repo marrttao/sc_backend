@@ -25,7 +25,6 @@ namespace queries.ApiForReact
 
             // Register Supabase-related services that exist in the project.
             builder.Services.AddSingleton<SupabaseService>();
-            builder.Services.AddSingleton(sp => sp.GetRequiredService<SupabaseService>()._supabase);
 
             builder.Services.AddScoped<InsertService>();
             builder.Services.AddScoped<FetchService>();
@@ -748,6 +747,54 @@ namespace queries.ApiForReact
 
                 await supabase.UnfollowUserAsync(user.Id, artistId, token, httpRequest.HttpContext.RequestAborted);
                 return Results.Ok(new { following = false });
+            });
+
+            // Generic proxy endpoint to bypass CORS for the external service
+            // Forwards requests to https://sc-backend-mq4c.onrender.com
+            app.MapMethods("/proxy/{**path}", new[] { "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" }, async (HttpRequest httpRequest, string path) =>
+            {
+                // Handle preflight quickly
+                if (string.Equals(httpRequest.Method, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Ok();
+                }
+
+                var targetBase = "https://sc-backend-mq4c.onrender.com".TrimEnd('/');
+                var targetUrl = string.IsNullOrEmpty(path) ? targetBase : $"{targetBase}/{path}";
+
+                using var client = new HttpClient();
+                using var proxied = new HttpRequestMessage(new HttpMethod(httpRequest.Method), targetUrl);
+
+                // Copy request headers (except Host)
+                foreach (var header in httpRequest.Headers)
+                {
+                    if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!proxied.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray()))
+                    {
+                        // Try content headers
+                        proxied.Content ??= new StringContent(string.Empty);
+                        proxied.Content.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
+                    }
+                }
+
+                // Copy body if present
+                if (httpRequest.ContentLength > 0)
+                {
+                    httpRequest.EnableBuffering();
+                    using var sr = new StreamReader(httpRequest.Body, Encoding.UTF8, leaveOpen: true);
+                    var body = await sr.ReadToEndAsync();
+                    httpRequest.Body.Position = 0;
+                    proxied.Content = new StringContent(body, Encoding.UTF8, httpRequest.ContentType ?? "application/json");
+                }
+
+                var response = await client.SendAsync(proxied, HttpCompletionOption.ResponseContentRead, httpRequest.HttpContext.RequestAborted);
+                var payload = await response.Content.ReadAsStringAsync(httpRequest.HttpContext.RequestAborted);
+                var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/json";
+                var status = (int)response.StatusCode;
+                response.Dispose();
+
+                httpRequest.HttpContext.Response.StatusCode = status;
+                return Results.Content(payload, contentType);
             });
 
             await app.RunAsync();
