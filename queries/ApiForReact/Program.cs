@@ -37,7 +37,7 @@ namespace queries.ApiForReact
             // CORS so React can call this API
             builder.Services.AddCors(options => options.AddPolicy("AllowFrontend", p =>
                 p.WithOrigins(
-                    "https://marrttao-sssoundcloud.vercel.app/",
+                    "https://marrttao-sssoundcloud.vercel.app",
                     "http://localhost:3000"
                 )
                 .AllowAnyMethod()
