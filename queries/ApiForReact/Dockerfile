@@ -1,0 +1,14 @@
+# === 1. Билдим проект ===
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet restore
+RUN dotnet publish -c Release -o /app/publish --no-restore
+
+# === 2. Запускаем ===
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /rc
+COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "sc_backend.dll"]
