@@ -1,22 +1,20 @@
-# === 1. Билдим проект ===
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Если проект в корне — оставь как есть
+# Копируем весь репозиторий
 COPY . .
 
-# Если проект в подпапке (например, в 'API/' или 'src/') — укажи здесь:
-# COPY ["API/*.csproj", "API/"]
-# RUN dotnet restore "API/API.csproj"
+# Идём в подпапку с проектом и восстанавливаем пакеты
+WORKDIR /src/queries/ApiForReact
+RUN dotnet restore "ApiForReact.csproj"
 
-RUN dotnet restore "ApiForReact.csproj"  # ← добавь имя .csproj здесь!
-
+# Билдим из той же папки
 RUN dotnet publish "ApiForReact.csproj" -c Release -o /app/publish --no-restore
 
-# === 2. Запускаем ===
+# Финальный этап запуска
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "sc_backend.dll"]
+ENTRYPOINT ["dotnet", "ApiForReact.dll"]
