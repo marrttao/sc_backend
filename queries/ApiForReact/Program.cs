@@ -215,7 +215,20 @@ namespace queries.ApiForReact
                 }
 
                 var profile = await profileService.BuildProfileAsync(token);
-                return profile is { } ? Results.Ok(profile) : Results.NotFound();
+                if (profile is { })
+                {
+                    return Results.Ok(profile);
+                }
+
+                // If the profile row is missing in Supabase, return a clear 200 response
+                // so the frontend can prompt the user to complete their profile instead
+                // of treating this as a generic 404 error.
+                return Results.Ok(new
+                {
+                    profile = (ProfileViewModel?)null,
+                    profileMissing = true,
+                    user = new { id = user.Id, email = user.Email ?? string.Empty }
+                });
             });
 
             app.MapPost("/profile/complete", async (ProfileUpsertRequest update, HttpRequest httpRequest, SupabaseService supabase) =>
