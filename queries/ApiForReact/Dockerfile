@@ -9,9 +9,9 @@ COPY . .
 # COPY ["API/*.csproj", "API/"]
 # RUN dotnet restore "API/API.csproj"
 
-RUN dotnet restore "queries.csproj"  # ← добавь имя .csproj здесь!
+RUN dotnet restore "ApiForReact.csproj"  # ← добавь имя .csproj здесь!
 
-RUN dotnet publish "queries.csproj" -c Release -o /app/publish --no-restore
+RUN dotnet publish "ApiForReact.csproj" -c Release -o /app/publish --no-restore
 
 # === 2. Запускаем ===
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
