@@ -104,6 +104,16 @@ namespace queries.ApiForReact
                 return Results.Ok(new { ok = true, envSupabaseUrl = !string.IsNullOrEmpty(url), envSupabaseKey = !string.IsNullOrEmpty(key) });
             });
 
+            // Temporary debug endpoint to inspect environment values relevant to email redirects.
+            // Do not leave in production long-term — exposes config info useful for debugging only.
+            app.MapGet("/_debug/env", () =>
+            {
+                var frontend = Environment.GetEnvironmentVariable("FRONTEND_URL");
+                var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? Environment.GetEnvironmentVariable("SupabaseUrl");
+                var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                return Results.Ok(new { FRONTEND_URL = frontend, SUPABASE_URL = supabaseUrl, ASPNETCORE_ENVIRONMENT = env });
+            });
+
             app.MapPost("/auth/signup", async (AuthRequest request, SupabaseService supabase, HttpContext httpContext) =>
             {
                 Console.WriteLine($"[DEBUG] Received signup: email={request.Email}, username={request.Username}, fullName={request.FullName}");
