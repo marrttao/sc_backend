@@ -18,25 +18,26 @@ public class HomeSidebarService
 
     public async Task<HomeSidebarViewModel> BuildSidebarAsync(Guid userId, string accessToken)
     {
-        var recommendedTask = BuildRecommendedAsync(userId, accessToken);
-        var likesTask = BuildLikesAsync(userId, accessToken);
+        var recommendedTask = BuildRecommendedAsync(accessToken);
+        var randomTracksTask = GetRandomTracksAsync(10, accessToken);
         var historyTask = BuildHistoryAsync(userId, accessToken);
 
-        await Task.WhenAll(recommendedTask, likesTask, historyTask);
+        await Task.WhenAll(recommendedTask, randomTracksTask, historyTask);
 
         return new HomeSidebarViewModel
         {
             Recommended = recommendedTask.Result,
-            Likes = likesTask.Result,
+            Likes = randomTracksTask.Result,
             History = historyTask.Result
         };
     }
 
-    private async Task<List<RecommendedArtist>> BuildRecommendedAsync(Guid userId, string accessToken)
+    private async Task<List<RecommendedArtist>> BuildRecommendedAsync(string accessToken)
     {
-        var candidateIds = await _supabase.GetRecentTrackOwnerIdsAsync(64, accessToken);
+        // Получаем всех пользователей с треками (без фильтрации по userId)
+        var candidateIds = await _supabase.GetRecentTrackOwnerIdsAsync(128, accessToken);
         var uniqueCandidates = candidateIds
-            .Where(id => id != userId)
+            .Where(id => id != Guid.Empty)
             .Distinct()
             .ToList();
 
@@ -45,19 +46,8 @@ public class HomeSidebarService
             return new List<RecommendedArtist>();
         }
 
-        var followingRelations = await _supabase.GetFollowingRelationsAsync(userId, uniqueCandidates, accessToken);
-        var followingSet = new HashSet<Guid>(followingRelations.Select(r => r.FollowingId));
-
-        var eligible = uniqueCandidates
-            .Where(id => !followingSet.Contains(id))
-            .ToList();
-
-        var selectionPool = eligible.Count > 0
-            ? new List<Guid>(eligible)
-            : new List<Guid>(uniqueCandidates);
-
-        Shuffle(selectionPool);
-        var selectedIds = selectionPool.Take(3).ToList();
+        Shuffle(uniqueCandidates);
+        var selectedIds = uniqueCandidates.Take(5).ToList();
 
         var profiles = await _supabase.GetProfilesByIdsAsync(selectedIds, accessToken);
         if (profiles.Count == 0)
@@ -93,11 +83,42 @@ public class HomeSidebarService
                 AvatarUrl = profile.AvatarUrl,
                 Followers = followerLookup.TryGetValue(profile.Id, out var followers) ? followers : 0,
                 Tracks = trackLookup.TryGetValue(profile.Id, out var tracks) ? tracks : 0,
-                IsFollowing = followingSet.Contains(profile.Id)
+                IsFollowing = false // неважно для карусели
             });
         }
 
         return result;
+    }
+
+    // Метод для случайных треков
+    private async Task<List<TrackSummary>> GetRandomTracksAsync(int count, string accessToken)
+    {
+        var recentOwners = await _supabase.GetRecentTrackOwnerIdsAsync(128, accessToken);
+        var tracks = await _supabase.GetLatestTracksForUsersAsync(recentOwners, 100, accessToken);
+        Shuffle(tracks);
+        var selected = tracks.Take(count).ToList();
+
+        var artistIds = selected.Select(t => t.UserId).Distinct().ToList();
+        var artistProfiles = await _supabase.GetProfilesByIdsAsync(artistIds, accessToken);
+        var artistLookup = artistProfiles.ToDictionary(p => p.Id);
+
+        return selected.Select(track =>
+        {
+            artistLookup.TryGetValue(track.UserId, out var artistProfile);
+            return new TrackSummary
+            {
+                TrackId = track.Id,
+                Title = track.Title,
+                Plays = track.PlaysCount > int.MaxValue ? int.MaxValue : (int)track.PlaysCount,
+                Likes = track.LikesCount > int.MaxValue ? int.MaxValue : (int)track.LikesCount,
+                Artist = artistProfile?.FullName ?? artistProfile?.Username ?? string.Empty,
+                ArtistId = artistProfile?.Id ?? Guid.Empty,
+                ArtistAvatar = artistProfile?.AvatarUrl,
+                CoverUrl = track.CoverUrl,
+                AudioUrl = track.AudioUrl,
+                DurationSeconds = track.DurationSeconds
+            };
+        }).ToList();
     }
 
     private async Task<List<TrackSummary>> BuildLikesAsync(Guid userId, string accessToken)
